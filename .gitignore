@@ -1,0 +1,9 @@
+._draw2D.h
+._draw3D.h
+._animations.h
+._transformations.h
+._camera.h
+._cuboRubick.h
+._main.cpp
+._CMakeLists.txt
+.DS_Store

@@ -4,65 +4,20 @@
 #include "camera.h"
 #include "draw2D.h"
 #include "draw3D.h"
+#include "cuboRubick.h"
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 #include <iostream>
+#include <memory>
+#include <utility>
 #include <vector>
 
-const Color PlasticBlack{0.015f, 0.014f, 0.012f, 1.0f};
-const Color Black{0.06f, 0.055f, 0.048f, 1.0f};
-const Color White{0.96f, 0.96f, 0.90f, 1.0f};
-const Color Yellow{1.00f, 0.84f, 0.05f, 1.0f};
-const Color Red{0.78f, 0.02f, 0.03f, 1.0f};
-const Color Orange{1.00f, 0.34f, 0.02f, 1.0f};
-const Color Blue{0.02f, 0.16f, 0.86f, 1.0f};
-const Color Green{0.00f, 0.58f, 0.18f, 1.0f};
-
-ShapeGroup* crearCubito(){
-    Cube* cubo1B = new Cube(0.5f, 0.5f, 0.5f, DrawPrim::Filled);
-    cubo1B->color = Black;
-    Cube* cubo2B = new Cube(0.45f, 0.45f, 0.02f, DrawPrim::Filled); // frente
-    cubo2B->color = White;
-    Cube* cubo3B = new Cube(0.45f, 0.02f, 0.45f, DrawPrim::Filled); // arriba
-    cubo3B->color = Red;
-    Cube* cubo4B = new Cube(0.45f, 0.45f, 0.02f, DrawPrim::Filled); // atras
-    cubo4B->color = Yellow;
-    Cube* cubo5B = new Cube(0.45f, 0.02f, 0.45f, DrawPrim::Filled); // abajo
-    cubo5B->color = Orange;
-    Cube* cubo6B = new Cube(0.02f, 0.45f, 0.45f, DrawPrim::Filled); // izq
-    cubo6B->color = Blue;
-    Cube* cubo7B = new Cube(0.02f, 0.45f, 0.45f, DrawPrim::Filled); // der
-    cubo7B->color = Green;
-    Mat4 initPos2B = Mat4::translate3D(0,0,0.26);
-	Mat4 initPos3B = Mat4::translate3D(0,0.26,0);
-    Mat4 initPos4B = Mat4::translate3D(0,0,-0.26);
-	Mat4 initPos5B = Mat4::translate3D(0,-0.26,0);
-    Mat4 initPos6B = Mat4::translate3D(-0.26,0,0);
-	Mat4 initPos7B = Mat4::translate3D(0.26,0,0);
-    cubo2B->transform.matrix = initPos2B;
-    cubo3B->transform.matrix = initPos3B;
-    cubo4B->transform.matrix = initPos4B;
-    cubo5B->transform.matrix = initPos5B;
-    cubo6B->transform.matrix = initPos6B;
-    cubo7B->transform.matrix = initPos7B;
-    //cubo2B->lineWidth = 2.0f;
-    
-    ShapeGroup* grupoCuboB = new ShapeGroup();
-    grupoCuboB->add(cubo1B);
-    grupoCuboB->add(cubo2B);
-    grupoCuboB->add(cubo3B);
-    grupoCuboB->add(cubo4B);
-    grupoCuboB->add(cubo5B);
-    grupoCuboB->add(cubo6B);
-    grupoCuboB->add(cubo7B);
-    return grupoCuboB;
-};
 
 using namespace std;
 
-static void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 
+static void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 
 static void processInput( GLFWwindow* window, Anim& animRotateCuboX, Anim& animRotateCuboY, Anim& animRotateCuboZ,
                           int& dirRotateCuboX, int& dirRotateCuboY, int& dirRotateCuboZ) {
@@ -148,23 +103,7 @@ int main() {
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
 
-    
-    
-   
-	
-	//Pyramid(float baseWidth, float baseDepth, float height, const vector<Color>& faceColors,
-           // DrawPrim prim = DrawPrim::Filled)
-	
-    ShapeGroup grupoGeneral;
-    //ShapeGroup* grupoCuboA = crearCubito() ;
-    //ShapeGroup* grupoCuboB = crearCubito();
-    for(int i=0; i<9;i++){
-        ShapeGroup* grupoCuboA = crearCubito();
-        grupoGeneral.addGroup(grupoCuboA);
-    }
-    grupoGeneral.arrangeGrid(3, 0.5,0.5);
-    //grupoGeneral.addGroup(grupoCuboA);
-    //grupoGeneral.addGroup(grupoCuboB);
+    RubickCube rubickCube(0.55f, 0.53f, 0.45f); //creacion cubo
 
     AnimSpec RotateCubo{};
     RotateCubo.durationSec = 1.0f;
@@ -177,7 +116,7 @@ int main() {
     Anim animRotateCuboY(RotateCubo);
     Anim animRotateCuboZ(RotateCubo);
 
-    Camera camera({0.0f, 0.0f, 2.0f});
+    Camera camera({0.0f, 0.0f, 4.0f});
     camera.moveSpeed = 0.6f;
 
     
@@ -188,16 +127,6 @@ int main() {
     int dirRotateCuboX = 1;
     int dirRotateCuboY = 1;
     int dirRotateCuboZ = 1;
-	
-	Mat4 initPosA = Mat4::translate3D(0.3,0,0);
-	Mat4 initPosB = Mat4::translate3D(-0.3,0,0);
-	
-
-	//grupoCuboA->transform.matrix = initPosA;
-    //grupoCuboB->transform.matrix = initPosB;
-
-	
-	
 	
     while (!glfwWindowShouldClose(window)) {
         processInput(window, animRotateCuboX, animRotateCuboY, animRotateCuboZ,
@@ -236,12 +165,12 @@ int main() {
         Mat4 rotX = Mat4::rotateX(baseRotateCuboX + sRotateCuboX * float(dirRotateCuboX));
         Mat4 rotY = Mat4::rotateY(baseRotateCuboY + sRotateCuboY * float(dirRotateCuboY));
         Mat4 rotZ = Mat4::rotateZ(baseRotateCuboZ + sRotateCuboZ * float(dirRotateCuboZ));
-		grupoGeneral.transform.matrix = rotY * rotX * rotZ;
+		rubickCube.transformMatGlobal(rotY * rotX * rotZ);
 		
-        glClearColor(0.05f, 0.1f, 0.14f, 1.0f);
+        glClearColor(0.4f, 0.4,0.4, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        grupoGeneral.draw();
+        rubickCube.draw();
 
 
         glfwSwapBuffers(window);
