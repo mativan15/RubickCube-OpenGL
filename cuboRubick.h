@@ -184,4 +184,4 @@ inline void RubickCube::rotarCoordenadas(CubitoRubick& cubito, Camada camada, in
     }
 }
 
-#endif // CUBO_RUBICK_H_INCLUDED
+#endif //

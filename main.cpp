@@ -31,11 +31,8 @@ static void processInput( GLFWwindow* window, Anim& animRotateCuboX, Anim& animR
     static bool prevRight = false;
     static bool prevUp = false;
     static bool prevDown = false;
-    static bool prevQ = false;
-    static bool prevE = false;
-    static bool prevX = false;
-    static bool prevY = false;
-    static bool prevZ = false;
+    static bool prevK = false;
+    static bool prevL = false;
 
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
@@ -44,11 +41,8 @@ static void processInput( GLFWwindow* window, Anim& animRotateCuboX, Anim& animR
     const bool right = glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS;
     const bool up = glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS;
     const bool down = glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS;
-    const bool q = glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS;
-    const bool e = glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS;
-    const bool x = glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS;
-    const bool y = glfwGetKey(window, GLFW_KEY_Y) == GLFW_PRESS;
-    const bool z = glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS;
+    const bool k = glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS;
+    const bool l = glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS;
 
     if (left && !prevLeft && !animRotateCuboY.isPlaying()) {
         dirRotateCuboY = 1;
@@ -66,24 +60,12 @@ static void processInput( GLFWwindow* window, Anim& animRotateCuboX, Anim& animR
         dirRotateCuboX = -1;
         animRotateCuboX.ignite( glfwGetTime());
     }
-    if (q && !prevQ && !animRotateCuboZ.isPlaying()) {
+    if (k && !prevK && !animRotateCuboZ.isPlaying()) {
         dirRotateCuboZ = 1;
         animRotateCuboZ.ignite( glfwGetTime());
     }
-    if (e && !prevE && !animRotateCuboZ.isPlaying()) {
+    if (l && !prevL && !animRotateCuboZ.isPlaying()) {
         dirRotateCuboZ = -1;
-        animRotateCuboZ.ignite( glfwGetTime());
-    }
-    if (x && !prevX && !animRotateCuboX.isPlaying()) {
-        dirRotateCuboX = 1;
-        animRotateCuboX.ignite( glfwGetTime());
-    }
-    if (y && !prevY && !animRotateCuboY.isPlaying()) {
-        dirRotateCuboY = 1;
-        animRotateCuboY.ignite( glfwGetTime());
-    }
-    if (z && !prevZ && !animRotateCuboZ.isPlaying()) {
-        dirRotateCuboZ = 1;
         animRotateCuboZ.ignite( glfwGetTime());
     }
 
@@ -91,11 +73,9 @@ static void processInput( GLFWwindow* window, Anim& animRotateCuboX, Anim& animR
     prevRight = right;
     prevUp = up;
     prevDown = down;
-    prevQ = q;
-    prevE = e;
-    prevX = x;
-    prevY = y;
-    prevZ = z;
+    prevK = k;
+    prevL = l;
+    
 }
 
 
@@ -135,7 +115,7 @@ int main() {
     AnimSpec RotateCubo{};
     RotateCubo.durationSec = 1.0f;
     RotateCubo.speed = 0.8f;
-    RotateCubo.amplitude = PI/4;
+    RotateCubo.amplitude = 2*PI/6;
     RotateCubo.bounce = false;
     RotateCubo.infinite = false;
 
@@ -174,15 +154,15 @@ int main() {
 
         const bool inverso = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
         if (!girandoCamada) {
-            if (keyPressed(window, GLFW_KEY_F)) { camadaActual = Front; dirCamada = inverso ? -1 : 1; girandoCamada = true; animRotateCamada.ignite(now); }
-            else if (keyPressed(window, GLFW_KEY_B)) { camadaActual = Back; dirCamada = inverso ? -1 : 1; girandoCamada = true; animRotateCamada.ignite(now); }
-            else if (keyPressed(window, GLFW_KEY_U)) { camadaActual = Up; dirCamada = inverso ? -1 : 1; girandoCamada = true; animRotateCamada.ignite(now); }
-            else if (keyPressed(window, GLFW_KEY_D)) { camadaActual = Down; dirCamada = inverso ? -1 : 1; girandoCamada = true; animRotateCamada.ignite(now); }
-            else if (keyPressed(window, GLFW_KEY_R)) { camadaActual = Right; dirCamada = inverso ? -1 : 1; girandoCamada = true; animRotateCamada.ignite(now); }
-            else if (keyPressed(window, GLFW_KEY_L)) { camadaActual = Left; dirCamada = inverso ? -1 : 1; girandoCamada = true; animRotateCamada.ignite(now); }
-            else if (keyPressed(window, GLFW_KEY_X)) { camadaActual = X; dirCamada = inverso ? -1 : 1; girandoCamada = true; animRotateCamada.ignite(now); }
-            else if (keyPressed(window, GLFW_KEY_Y)) { camadaActual = Y; dirCamada = inverso ? -1 : 1; girandoCamada = true; animRotateCamada.ignite(now); }
-            else if (keyPressed(window, GLFW_KEY_Z)) { camadaActual = Z; dirCamada = inverso ? -1 : 1; girandoCamada = true; animRotateCamada.ignite(now); }
+            if (keyPressed(window, GLFW_KEY_Q)) { camadaActual = Up; dirCamada = inverso ? -1 : 1; girandoCamada = true; animRotateCamada.ignite(now); }
+            else if (keyPressed(window, GLFW_KEY_W)) { camadaActual = Y; dirCamada = inverso ? -1 : 1; girandoCamada = true; animRotateCamada.ignite(now); }
+            else if (keyPressed(window, GLFW_KEY_E)) { camadaActual = Down; dirCamada = inverso ? -1 : 1; girandoCamada = true; animRotateCamada.ignite(now); }
+            else if (keyPressed(window, GLFW_KEY_A)) { camadaActual = Left; dirCamada = inverso ? -1 : 1; girandoCamada = true; animRotateCamada.ignite(now); }
+            else if (keyPressed(window, GLFW_KEY_S)) { camadaActual = X; dirCamada = inverso ? -1 : 1; girandoCamada = true; animRotateCamada.ignite(now); }
+            else if (keyPressed(window, GLFW_KEY_D)) { camadaActual = Right; dirCamada = inverso ? -1 : 1; girandoCamada = true; animRotateCamada.ignite(now); }
+            else if (keyPressed(window, GLFW_KEY_Z)) { camadaActual = Front; dirCamada = inverso ? -1 : 1; girandoCamada = true; animRotateCamada.ignite(now); }
+            else if (keyPressed(window, GLFW_KEY_X)) { camadaActual = Z; dirCamada = inverso ? -1 : 1; girandoCamada = true; animRotateCamada.ignite(now); }
+            else if (keyPressed(window, GLFW_KEY_C)) { camadaActual = Back; dirCamada = inverso ? -1 : 1; girandoCamada = true; animRotateCamada.ignite(now); }
         }
 
         const bool wasRotX = animRotateCuboX.isPlaying();
