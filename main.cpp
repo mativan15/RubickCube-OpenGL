@@ -15,8 +15,6 @@
 
 
 using namespace std;
-
-
 static void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 
 static bool keyPressed(GLFWwindow* window, int key) {
@@ -35,6 +33,9 @@ static void processInput( GLFWwindow* window, Anim& animRotateCuboX, Anim& animR
     static bool prevDown = false;
     static bool prevQ = false;
     static bool prevE = false;
+    static bool prevX = false;
+    static bool prevY = false;
+    static bool prevZ = false;
 
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
@@ -45,6 +46,9 @@ static void processInput( GLFWwindow* window, Anim& animRotateCuboX, Anim& animR
     const bool down = glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS;
     const bool q = glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS;
     const bool e = glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS;
+    const bool x = glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS;
+    const bool y = glfwGetKey(window, GLFW_KEY_Y) == GLFW_PRESS;
+    const bool z = glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS;
 
     if (left && !prevLeft && !animRotateCuboY.isPlaying()) {
         dirRotateCuboY = 1;
@@ -70,6 +74,18 @@ static void processInput( GLFWwindow* window, Anim& animRotateCuboX, Anim& animR
         dirRotateCuboZ = -1;
         animRotateCuboZ.ignite( glfwGetTime());
     }
+    if (x && !prevX && !animRotateCuboX.isPlaying()) {
+        dirRotateCuboX = 1;
+        animRotateCuboX.ignite( glfwGetTime());
+    }
+    if (y && !prevY && !animRotateCuboY.isPlaying()) {
+        dirRotateCuboY = 1;
+        animRotateCuboY.ignite( glfwGetTime());
+    }
+    if (z && !prevZ && !animRotateCuboZ.isPlaying()) {
+        dirRotateCuboZ = 1;
+        animRotateCuboZ.ignite( glfwGetTime());
+    }
 
     prevLeft = left;
     prevRight = right;
@@ -77,6 +93,9 @@ static void processInput( GLFWwindow* window, Anim& animRotateCuboX, Anim& animR
     prevDown = down;
     prevQ = q;
     prevE = e;
+    prevX = x;
+    prevY = y;
+    prevZ = z;
 }
 
 
@@ -153,8 +172,7 @@ int main() {
 
         const double now = glfwGetTime();
 
-        const bool inverso = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
-                             glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
+        const bool inverso = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
         if (!girandoCamada) {
             if (keyPressed(window, GLFW_KEY_F)) { camadaActual = Front; dirCamada = inverso ? -1 : 1; girandoCamada = true; animRotateCamada.ignite(now); }
             else if (keyPressed(window, GLFW_KEY_B)) { camadaActual = Back; dirCamada = inverso ? -1 : 1; girandoCamada = true; animRotateCamada.ignite(now); }
@@ -162,6 +180,9 @@ int main() {
             else if (keyPressed(window, GLFW_KEY_D)) { camadaActual = Down; dirCamada = inverso ? -1 : 1; girandoCamada = true; animRotateCamada.ignite(now); }
             else if (keyPressed(window, GLFW_KEY_R)) { camadaActual = Right; dirCamada = inverso ? -1 : 1; girandoCamada = true; animRotateCamada.ignite(now); }
             else if (keyPressed(window, GLFW_KEY_L)) { camadaActual = Left; dirCamada = inverso ? -1 : 1; girandoCamada = true; animRotateCamada.ignite(now); }
+            else if (keyPressed(window, GLFW_KEY_X)) { camadaActual = X; dirCamada = inverso ? -1 : 1; girandoCamada = true; animRotateCamada.ignite(now); }
+            else if (keyPressed(window, GLFW_KEY_Y)) { camadaActual = Y; dirCamada = inverso ? -1 : 1; girandoCamada = true; animRotateCamada.ignite(now); }
+            else if (keyPressed(window, GLFW_KEY_Z)) { camadaActual = Z; dirCamada = inverso ? -1 : 1; girandoCamada = true; animRotateCamada.ignite(now); }
         }
 
         const bool wasRotX = animRotateCuboX.isPlaying();
@@ -198,8 +219,7 @@ int main() {
         prevNow = now;
 
         const Mat4 view = camera.viewMatrix();
-        const Mat4 projection = perspective(camera.zoomFovDeg,static_cast<float>(SCR_W) / static_cast<float>(SCR_H),
-                                            0.1f, 100.0f);
+        const Mat4 projection = perspective(camera.zoomFovDeg,static_cast<float>(SCR_W) / static_cast<float>(SCR_H), 0.1f, 100.0f);
         setViewMatrix(view);
         setProjectionMatrix(projection);
         
@@ -208,7 +228,7 @@ int main() {
         Mat4 rotZ = Mat4::rotateZ(baseRotateCuboZ + sRotateCuboZ * float(dirRotateCuboZ));
 		rubickCube.transformMatGlobal(rotY * rotX * rotZ);
 		
-        glClearColor(0.4f, 0.4,0.4, 1.0f);
+        glClearColor(0.3f, 0.3,0.3, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         rubickCube.draw();
