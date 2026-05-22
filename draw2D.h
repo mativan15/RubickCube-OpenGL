@@ -772,6 +772,31 @@ public:
         children_.push_back({p, nullptr});
     }
 
+    // Remove a child from this group without calling delete.
+    // If the shape was added with addOwned(), ownership stays in this group.
+    bool remove(Shape* s) {
+        if (!s) return false;
+        for (auto it = children_.begin(); it != children_.end(); ++it) {
+            if (it->shape == s) {
+                children_.erase(it);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Remove a child group from this group without calling delete.
+    bool removeGroup(ShapeGroup* g) {
+        if (!g) return false;
+        for (auto it = children_.begin(); it != children_.end(); ++it) {
+            if (it->group == g) {
+                children_.erase(it);
+                return true;
+            }
+        }
+        return false;
+    }
+
     void clear() {
         children_.clear();
         owned_.clear();

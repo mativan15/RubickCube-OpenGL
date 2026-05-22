@@ -19,6 +19,14 @@ using namespace std;
 
 static void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 
+static bool keyPressed(GLFWwindow* window, int key) {
+    static bool prev[GLFW_KEY_LAST + 1] = {};
+    const bool down = glfwGetKey(window, key) == GLFW_PRESS;
+    const bool pressed = down && !prev[key];
+    prev[key] = down;
+    return pressed;
+}
+
 static void processInput( GLFWwindow* window, Anim& animRotateCuboX, Anim& animRotateCuboY, Anim& animRotateCuboZ,
                           int& dirRotateCuboX, int& dirRotateCuboY, int& dirRotateCuboZ) {
     static bool prevLeft = false;
@@ -108,13 +116,24 @@ int main() {
     AnimSpec RotateCubo{};
     RotateCubo.durationSec = 1.0f;
     RotateCubo.speed = 0.8f;
-    RotateCubo.amplitude = PI/2;
+    RotateCubo.amplitude = PI/4;
     RotateCubo.bounce = false;
     RotateCubo.infinite = false;
 
     Anim animRotateCuboX(RotateCubo);
     Anim animRotateCuboY(RotateCubo);
     Anim animRotateCuboZ(RotateCubo);
+
+    AnimSpec RotateCamada{};
+    RotateCamada.durationSec = 0.35f;
+    RotateCamada.speed = 1.0f;
+    RotateCamada.amplitude = PI/2;
+    RotateCamada.bounce = false;
+    RotateCamada.infinite = false;
+    Anim animRotateCamada(RotateCamada);
+    bool girandoCamada = false;
+    Camada camadaActual = Front;
+    int dirCamada = 1;
 
     Camera camera({0.0f, 0.0f, 4.0f});
     camera.moveSpeed = 0.6f;
@@ -134,12 +153,25 @@ int main() {
 
         const double now = glfwGetTime();
 
+        const bool inverso = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
+                             glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
+        if (!girandoCamada) {
+            if (keyPressed(window, GLFW_KEY_F)) { camadaActual = Front; dirCamada = inverso ? -1 : 1; girandoCamada = true; animRotateCamada.ignite(now); }
+            else if (keyPressed(window, GLFW_KEY_B)) { camadaActual = Back; dirCamada = inverso ? -1 : 1; girandoCamada = true; animRotateCamada.ignite(now); }
+            else if (keyPressed(window, GLFW_KEY_U)) { camadaActual = Up; dirCamada = inverso ? -1 : 1; girandoCamada = true; animRotateCamada.ignite(now); }
+            else if (keyPressed(window, GLFW_KEY_D)) { camadaActual = Down; dirCamada = inverso ? -1 : 1; girandoCamada = true; animRotateCamada.ignite(now); }
+            else if (keyPressed(window, GLFW_KEY_R)) { camadaActual = Right; dirCamada = inverso ? -1 : 1; girandoCamada = true; animRotateCamada.ignite(now); }
+            else if (keyPressed(window, GLFW_KEY_L)) { camadaActual = Left; dirCamada = inverso ? -1 : 1; girandoCamada = true; animRotateCamada.ignite(now); }
+        }
+
         const bool wasRotX = animRotateCuboX.isPlaying();
         const bool wasRotY = animRotateCuboY.isPlaying();
         const bool wasRotZ = animRotateCuboZ.isPlaying();
+        const bool wasRotCamada = animRotateCamada.isPlaying();
         float sRotateCuboX = animRotateCuboX.scalar(now);
         float sRotateCuboY = animRotateCuboY.scalar(now);
         float sRotateCuboZ = animRotateCuboZ.scalar(now);
+        float sRotateCamada = animRotateCamada.scalar(now);
 
         if (wasRotX && !animRotateCuboX.isPlaying()) {
             baseRotateCuboX += RotateCubo.amplitude * float(dirRotateCuboX);
@@ -151,6 +183,15 @@ int main() {
         if (wasRotZ && !animRotateCuboZ.isPlaying()) {
             baseRotateCuboZ += RotateCubo.amplitude * float(dirRotateCuboZ);
             sRotateCuboZ = 0.0f; }
+        if (girandoCamada) {
+            if (wasRotCamada && !animRotateCamada.isPlaying()) {
+                rubickCube.confirmarGiro(camadaActual, dirCamada);
+                girandoCamada = false;
+                sRotateCamada = 0.0f;
+            } else {
+                rubickCube.moverCamada(camadaActual, sRotateCamada * float(dirCamada));
+            }
+        }
 
         float dt = static_cast<float>(now - prevNow);
         if (dt > 0.1f) dt = 0.1f;
