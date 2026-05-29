@@ -1,4 +1,4 @@
-project( Project_08_glfw )
+project( Cubo_Rubik )
 
 message( "Source of application:  ${CMAKE_SOURCE_DIR} " )
 message( "Subproject name:  ${PROJECT_NAME} " )
