@@ -115,7 +115,7 @@ int main() {
     AnimSpec RotateCubo{};
     RotateCubo.durationSec = 1.0f;
     RotateCubo.speed = 0.8f;
-    RotateCubo.amplitude = 2*PI/6;
+    RotateCubo.amplitude = PI/4;
     RotateCubo.bounce = false;
     RotateCubo.infinite = false;
 
