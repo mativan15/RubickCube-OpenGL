@@ -146,7 +146,7 @@ private:
             );
         }
 
-        if (keyPressedOnce(window, GLFW_KEY_Q)) {
+        if (keyPressedOnce(window, GLFW_KEY_T)) {
             currentView = ViewMode::Down;
             layerMode = LayerMode::FaceView;
             selectedLayer = 0;
@@ -175,21 +175,18 @@ private:
     void handleOrbitWASD(GLFWwindow* window, Camera& camera, float dt) {
         const float speed = camera.orbitSpeedDeg * dt;
 
-        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-            camera.orbit(-speed, 0.0f);
-        }
-
-        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-            camera.orbit(speed, 0.0f);
-        }
-
-        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-            camera.orbit(0.0f, speed);
-        }
-
-        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-            camera.orbit(0.0f, -speed);
-        }
+		if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
+			camera.orbit(-speed, 0.0f);
+		}
+		if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
+			camera.orbit(speed, 0.0f);
+		}
+		if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
+			camera.orbit(0.0f, speed);
+		}
+		if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
+			camera.orbit(0.0f, -speed);
+		}
     }
 
     void handleMouseOrbit(GLFWwindow* window, Camera& camera) {
