@@ -1,4 +1,4 @@
-project( Cubo_Rubik )
+project( cuborubick_glfw )
 
 message( "Source of application:  ${CMAKE_SOURCE_DIR} " )
 message( "Subproject name:  ${PROJECT_NAME} " )
@@ -46,10 +46,17 @@ file(GLOB SOURCES "*.cpp" ${DEPENDENCY_DIR}/include/glad/glad/glad.c )
 file(GLOB HEADERS "*.h" )
 file(GLOB SHADERS "*.vert" "*.frag" "*.vs" "*.fs" )
 
+# min2phase (Kociemba solver)
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/min2phase/include")
+file(GLOB MIN2PHASE_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/min2phase/src/*.cpp")
+# Forzar optimizacion en min2phase independientemente del build type
+set_source_files_properties(${MIN2PHASE_SOURCES} PROPERTIES COMPILE_FLAGS "-O2")
+
 add_executable(
- ${PROJECT_NAME} WIN32 MACOSX_BUNDLE  
+ ${PROJECT_NAME} WIN32 MACOSX_BUNDLE
  ${HEADERS} ${SOURCES} ${SHADERS}
- ${ICON} ${GLAD_GL}   )
+ ${ICON} ${GLAD_GL}
+ ${MIN2PHASE_SOURCES} )
 
 message( "\nBuild mode test is: ${CMAKE_BUILD_TYPE}" )
 
