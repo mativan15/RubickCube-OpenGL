@@ -11,7 +11,8 @@ using namespace std;
 
 enum Camada {Front, Back, Up, Down, Right, Left, X, Y, Z};
 
-struct CubitoRubick {
+class CubitoRubick {
+public:
     ShapeGroup* grupo = nullptr;
     int x = 0, y = 0, z = 0;
     Mat4 orientacion = Mat4::identity();

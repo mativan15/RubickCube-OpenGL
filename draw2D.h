@@ -74,7 +74,8 @@ using namespace std;
 // -----------------------------------------------------------------------------
 //  Color
 // -----------------------------------------------------------------------------
-struct Color {
+class Color {
+public:
     float r = 1.0f, g = 1.0f, b = 1.0f, a = 1.0f;
 };
 
@@ -106,7 +107,8 @@ enum class DrawPrim {
 //  Uniform names default to those expected by the built-in shader, but can be
 //  overridden so you can plug in any program of your own.
 // -----------------------------------------------------------------------------
-struct UniformNames {
+class UniformNames {
+public:
     string projection = "uProjection";
     string view = "uView";
     string model = "uModel";
@@ -887,7 +889,8 @@ public:
     }
 
 private:
-    struct Child {
+    class Child {
+    public:
         Shape* shape = nullptr;
         ShapeGroup* group = nullptr;
     };

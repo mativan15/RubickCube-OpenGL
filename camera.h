@@ -5,7 +5,8 @@
 #include <cmath>
 
 // Basic 3D vector.
-struct Vec3 {
+class Vec3 {
+public:
     float x = 0.0f;
     float y = 0.0f;
     float z = 0.0f;
@@ -116,7 +117,8 @@ enum class CameraMove {
     Down
 };
 
-struct Camera {
+class Camera {
+public:
     Vec3 position{0.0f, 0.0f, 4.0f};
 
     Vec3 front{0.0f, 0.0f, -1.0f};
