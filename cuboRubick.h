@@ -67,7 +67,10 @@ public:
         actualizarCamadas();
         aplicarTransformaciones();
     }
-    
+
+    // Devuelve los 54 caracteres en formato Kociemba: U9 R9 F9 D9 L9 B9
+    // Mapeo: U=Rojo(+Y), R=Verde(+X), F=Blanco(+Z), D=Naranja(-Y), L=Azul(-X), B=Amarillo(-Z)
+    std::string getEstado() const;
 
 private:
     float espaciado, tamanhoCubito, tamanhoSticker;
@@ -84,6 +87,8 @@ private:
     Mat4 matrizBase(const CubitoRubick& cubito) const;
     Mat4 matrizRotacion(Camada camada, float angulo) const;
     void rotarCoordenadas(CubitoRubick& cubito, Camada camada, int dir);
+    const CubitoRubick* cubitoEn(int x, int y, int z) const;
+    char colorEnDireccion(const CubitoRubick& cubito, int dx, int dy, int dz) const;
     const Color Black{0.015f, 0.014f, 0.012f, 1.0f};
     const Color White{0.96f, 0.96f, 0.90f, 1.0f};
     const Color Yellow{1.00f, 0.84f, 0.05f, 1.0f};
@@ -182,6 +187,56 @@ inline void RubickCube::rotarCoordenadas(CubitoRubick& cubito, Camada camada, in
         cubito.x = signo > 0 ? -oldY : oldY;
         cubito.y = signo > 0 ? oldX : -oldX;
     }
+}
+
+inline const CubitoRubick* RubickCube::cubitoEn(int x, int y, int z) const {
+    for (const CubitoRubick& c : cubitos)
+        if (c.x == x && c.y == y && c.z == z) return &c;
+    return nullptr;
+}
+
+// Aplica M^T a la normal (dx,dy,dz) para recuperar el color original del sticker.
+// M (orientacion) es rotacion pura, M^T == M^-1.
+inline char RubickCube::colorEnDireccion(const CubitoRubick& cubito, int dx, int dy, int dz) const {
+    const float* m = cubito.orientacion.m;
+    const int ix = static_cast<int>(std::round(m[0]*dx + m[1]*dy + m[2]*dz));
+    const int iy = static_cast<int>(std::round(m[4]*dx + m[5]*dy + m[6]*dz));
+    const int iz = static_cast<int>(std::round(m[8]*dx + m[9]*dy + m[10]*dz));
+    if (iz ==  1) return 'F';  // Blanco  — Front (+Z)
+    if (iy ==  1) return 'U';  // Rojo    — Up    (+Y)
+    if (ix ==  1) return 'R';  // Verde   — Right (+X)
+    if (iz == -1) return 'B';  // Amarillo— Back  (-Z)
+    if (iy == -1) return 'D';  // Naranja — Down  (-Y)
+    if (ix == -1) return 'L';  // Azul    — Left  (-X)
+    return '?';
+}
+
+// Devuelve los 54 caracteres en formato Kociemba: U9 R9 F9 D9 L9 B9
+inline std::string RubickCube::getEstado() const {
+    static const int normals[6][3] = {
+        { 0, 1, 0},  // U
+        { 1, 0, 0},  // R
+        { 0, 0, 1},  // F
+        { 0,-1, 0},  // D
+        {-1, 0, 0},  // L
+        { 0, 0,-1}   // B
+    };
+    static const int pos[6][9][3] = {
+        {{-1,1,-1},{0,1,-1},{1,1,-1}, {-1,1,0},{0,1,0},{1,1,0},   {-1,1,1},{0,1,1},{1,1,1}},
+        {{1,1,1},{1,1,0},{1,1,-1},   {1,0,1},{1,0,0},{1,0,-1},    {1,-1,1},{1,-1,0},{1,-1,-1}},
+        {{-1,1,1},{0,1,1},{1,1,1},   {-1,0,1},{0,0,1},{1,0,1},    {-1,-1,1},{0,-1,1},{1,-1,1}},
+        {{-1,-1,1},{0,-1,1},{1,-1,1},{-1,-1,0},{0,-1,0},{1,-1,0},{-1,-1,-1},{0,-1,-1},{1,-1,-1}},
+        {{-1,1,-1},{-1,1,0},{-1,1,1},{-1,0,-1},{-1,0,0},{-1,0,1},{-1,-1,-1},{-1,-1,0},{-1,-1,1}},
+        {{1,1,-1},{0,1,-1},{-1,1,-1}, {1,0,-1},{0,0,-1},{-1,0,-1}, {1,-1,-1},{0,-1,-1},{-1,-1,-1}}
+    };
+    std::string estado;
+    estado.reserve(54);
+    for (int f = 0; f < 6; ++f)
+        for (int i = 0; i < 9; ++i)
+            estado += colorEnDireccion(
+                *cubitoEn(pos[f][i][0], pos[f][i][1], pos[f][i][2]),
+                normals[f][0], normals[f][1], normals[f][2]);
+    return estado;
 }
 
 #endif //
