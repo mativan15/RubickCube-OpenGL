@@ -1,0 +1,318 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[spanish]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{array}
+\usepackage{geometry}
+\usepackage{booktabs}
+
+\geometry{
+    left=2.5cm,
+    right=2.5cm,
+    top=2.5cm,
+    bottom=2.5cm
+}
+
+\title{\textbf{Informe de la implementación de un Cubo Rubik en OpenGL}}
+
+\author{
+Iván Matthías Sardón Medina\\
+José Miguel Mateo Valdivia Castillo\\
+Nombre del tercer integrante
+}
+
+\date{Mayo 2026}
+
+\begin{document}
+
+\maketitle
+
+% =========================================================
+\section{Implementación del Cubo Rubick}
+% =========================================================
+
+La implementación del cubo se encuentra principalmente en el archivo \texttt{cuboRubick.h}. La clase central es \texttt{RubickCube}, encargada de construir la geometría del cubo, mantener el estado lógico de cada pieza y aplicar las transformaciones necesarias para dibujarlo en pantalla. El programa no representa el cubo como una sola malla, sino como una composición de 27 cubitos independientes. Esta decisión permite rotar una camada sin afectar directamente a las demás piezas.
+
+Cada pieza del cubo se almacena mediante la estructura \texttt{CubitoRubick}. Esta estructura contiene tres elementos importantes:
+
+\begin{itemize}
+    \item Un puntero a un \texttt{ShapeGroup}, que agrupa la geometría visible del cubito.
+    \item Las coordenadas enteras \texttt{x}, \texttt{y} y \texttt{z}, cuyos valores pertenecen al conjunto $\{-1,0,1\}$.
+    \item Una matriz \texttt{orientacion}, que conserva la orientación acumulada de los stickers después de cada giro confirmado.
+\end{itemize}
+
+Las coordenadas enteras cumplen una función lógica. No indican posiciones exactas en unidades OpenGL, sino la ubicación del cubito dentro de la estructura del Rubik. Por ejemplo, un cubito con \texttt{x = 1} pertenece a la cara derecha, uno con \texttt{y = 1} pertenece a la cara superior y uno con \texttt{z = 1} pertenece a la cara frontal. Luego, al momento de dibujar, estas coordenadas se convierten en posiciones reales multiplicándolas por el valor de espaciado definido para el cubo.
+
+En el constructor de \texttt{RubickCube} se recorren las tres coordenadas desde $-1$ hasta $1$. Con estos tres bucles anidados se generan las 27 posiciones posibles del cubo:
+
+\begin{center}
+$x,y,z \in \{-1,0,1\}$
+\end{center}
+
+Para cada combinación se llama a \texttt{crearCubito(x,y,z)}, se agrega el grupo resultante a \texttt{grupoGeneral} y se registra el cubito en el vector \texttt{cubitos}. En \texttt{main.cpp} la instancia se crea con:
+
+\begin{center}
+\texttt{RubickCube rubickCube(0.55f, 0.53f, 0.45f);}
+\end{center}
+
+Estos valores definen, respectivamente, la separación entre centros de cubitos, el tamaño del cuerpo negro de cada cubito y el tamaño visual de cada sticker.
+
+La función \texttt{crearCubito} construye cada pieza a partir de un cubo negro base y, según su posición, agrega stickers de colores en las caras externas. Si una coordenada está en el centro de un eje, no se agrega sticker en esa dirección porque esa cara queda oculta dentro del Rubik. La correspondencia de colores usada en el código es la siguiente:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|c|c|c|}
+\hline
+\textbf{Condición} & \textbf{Cara} & \textbf{Color} \\ \hline
+\texttt{z == 1} & Frontal & Blanco \\ \hline
+\texttt{y == 1} & Superior & Rojo \\ \hline
+\texttt{x == 1} & Derecha & Verde \\ \hline
+\texttt{z == -1} & Trasera & Amarillo \\ \hline
+\texttt{y == -1} & Inferior & Naranja \\ \hline
+\texttt{x == -1} & Izquierda & Azul \\ \hline
+\end{tabular}
+\caption{Asignación de stickers según la posición inicial de cada cubito.}
+\end{table}
+
+La geometría se organiza de forma jerárquica. Cada cubito es un \texttt{ShapeGroup} que contiene su cuerpo negro y sus stickers. Todos los cubitos, a su vez, se agregan a un grupo mayor llamado \texttt{grupoGeneral}. Esto permite aplicar una transformación global al cubo completo sin destruir la posición interna de las piezas. Por ejemplo, al rotar visualmente el cubo completo desde \texttt{main.cpp}, se modifica la matriz de \texttt{grupoGeneral}, mientras que la lógica interna del Rubik permanece igual.
+
+La matriz base de cada cubito se calcula en \texttt{matrizBase}. Esta matriz combina la traslación según la posición lógica del cubito y su orientación acumulada:
+
+\begin{center}
+\texttt{translate3D(x * espaciado, y * espaciado, z * espaciado) * orientacion}
+\end{center}
+
+Con esta separación, el programa distingue entre dos conceptos: la posición lógica del cubito dentro del Rubik y la orientación local de sus colores. Esta distinción es necesaria porque, después de una rotación, una pieza puede moverse a otra posición y además cambiar la dirección hacia la que apuntan sus stickers.
+
+Finalmente, la clase mantiene un arreglo de nueve camadas mediante:
+
+\begin{center}
+\texttt{array<vector<CubitoRubick*>, 9> camadas;}
+\end{center}
+
+Cada entrada del arreglo contiene punteros a los cubitos que pertenecen a una camada específica. La función \texttt{actualizarCamadas} reconstruye estas listas usando las coordenadas lógicas actuales de todos los cubitos. Este paso es importante después de cada giro confirmado, porque una pieza que antes pertenecía a una cara puede pasar a otra.
+
+% =========================================================
+\section{Rotación de camadas}
+% =========================================================
+
+Las camadas se definen mediante el enumerado \texttt{Camada}, que considera las seis caras externas del cubo y las tres camadas centrales:
+
+\begin{center}
+\texttt{Front, Back, Up, Down, Right, Left, X, Y, Z}
+\end{center}
+
+Las camadas \texttt{Front}, \texttt{Back}, \texttt{Up}, \texttt{Down}, \texttt{Right} y \texttt{Left} corresponden a las caras visibles de un cubo Rubik tradicional. Las camadas \texttt{X}, \texttt{Y} y \texttt{Z} representan los cortes centrales perpendiculares a los ejes $X$, $Y$ y $Z$. En todos los casos, una camada está compuesta por nueve cubitos.
+
+La selección de los cubitos que pertenecen a cada camada se realiza al actualizar las camadas. La lógica es directa: si un cubito tiene una coordenada constante, se agrega a la camada asociada. Por ejemplo, todos los cubitos con \texttt{z == 1} forman la camada frontal, todos los cubitos con \texttt{x == -1} forman la camada izquierda y todos los cubitos con \texttt{y == 0} forman la camada central del eje $Y$.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|c|c|c|}
+\hline
+\textbf{Camada} & \textbf{Condición lógica} & \textbf{Eje de giro} \\ \hline
+\texttt{Right} & \texttt{x == 1} & $X$ \\ \hline
+\texttt{X} & \texttt{x == 0} & $X$ \\ \hline
+\texttt{Left} & \texttt{x == -1} & $X$ \\ \hline
+\texttt{Up} & \texttt{y == 1} & $Y$ \\ \hline
+\texttt{Y} & \texttt{y == 0} & $Y$ \\ \hline
+\texttt{Down} & \texttt{y == -1} & $Y$ \\ \hline
+\texttt{Front} & \texttt{z == 1} & $Z$ \\ \hline
+\texttt{Z} & \texttt{z == 0} & $Z$ \\ \hline
+\texttt{Back} & \texttt{z == -1} & $Z$ \\ \hline
+\end{tabular}
+\caption{Relación entre camadas, coordenadas lógicas y eje de rotación.}
+\end{table}
+
+En \texttt{main.cpp}, el usuario selecciona y ejecuta giros de camadas con las teclas \texttt{Q}, \texttt{W}, \texttt{E}, \texttt{A}, \texttt{S}, \texttt{D}, \texttt{Z}, \texttt{X} y \texttt{C}. Cada tecla asigna una camada a \texttt{camadaActual}, define el sentido en \texttt{dirCamada} y activa la animación \texttt{animRotateCamada}. Si se mantiene presionada la tecla \texttt{Shift}, el sentido del giro se invierte.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|c|c|}
+\hline
+\textbf{Tecla} & \textbf{Camada ejecutada} \\ \hline
+\texttt{Q} & \texttt{Up} \\ \hline
+\texttt{W} & \texttt{Y} \\ \hline
+\texttt{E} & \texttt{Down} \\ \hline
+\texttt{A} & \texttt{Left} \\ \hline
+\texttt{S} & \texttt{X} \\ \hline
+\texttt{D} & \texttt{Right} \\ \hline
+\texttt{Z} & \texttt{Front} \\ \hline
+\texttt{X} & \texttt{Z} \\ \hline
+\texttt{C} & \texttt{Back} \\ \hline
+\end{tabular}
+\caption{Mapeo de teclas a camadas según la implementación actual.}
+\end{table}
+
+La función \texttt{matrizRotacion} decide qué matriz de rotación se debe usar según la camada seleccionada. Si la camada pertenece al grupo \texttt{Right}, \texttt{Left} o \texttt{X}, se usa una rotación alrededor del eje $X$. Si pertenece a \texttt{Up}, \texttt{Down} o \texttt{Y}, se usa el eje $Y$. Para \texttt{Front}, \texttt{Back} y \texttt{Z}, se usa el eje $Z$.
+
+El giro no se aplica inmediatamente como un cambio lógico completo. Primero se realiza una animación visual mediante \texttt{moverCamada}. Esta función llama a la versión con parámetros de:
+
+\begin{center}
+\texttt{aplicarTransformaciones(camada, angulo)}
+\end{center}
+
+Allí todos los cubitos se dibujan con su matriz base y únicamente los cubitos de la camada seleccionada reciben una matriz adicional de rotación. Así, durante la animación, el usuario ve que la camada se mueve gradualmente, pero las coordenadas lógicas todavía no cambian.
+
+Cuando la animación termina, se llama a \texttt{confirmarGiro}. En ese momento el programa actualiza definitivamente el estado del cubo: cambia las coordenadas enteras de los nueve cubitos de la camada, actualiza la matriz de orientación de cada uno y reconstruye la lista de camadas. Esta separación evita errores de acumulación y mantiene estable la estructura del Rubik después de muchos movimientos.
+
+% =========================================================
+\section{Implementación del solver}
+% =========================================================
+
+% =========================================================
+\section{Uso del programa e interacción con el cubo Rubik}
+% =========================================================
+
+La interacción se realiza mediante teclado y mouse, permitiendo cambiar la vista de la cámara, orbitar alrededor del cubo y rotar camadas específicas.
+
+% ---------------------------------------------------------
+\subsection{Sistema de cámara}
+% ---------------------------------------------------------
+
+La cámara permite observar el cubo desde vistas predefinidas y también mediante un modo orbital. 
+En las vistas predefinidas, la cámara se ubica frente a una cara específica del cubo. En el modo orbital, la cámara gira alrededor del cubo manteniéndolo siempre como centro de referencia.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|c|l|}
+\hline
+\textbf{Tecla} & \textbf{Acción} \\ \hline
+\texttt{F} & Vista frontal \\ \hline
+\texttt{B} & Vista trasera \\ \hline
+\texttt{L} & Vista izquierda \\ \hline
+\texttt{R} & Vista derecha \\ \hline
+\texttt{U} & Vista superior \\ \hline
+\texttt{Q} & Vista inferior \\ \hline
+\texttt{O} & Activa el modo órbita global \\ \hline
+\end{tabular}
+\caption{Controles de vistas de cámara.}
+\end{table}
+
+El movimiento orbital permite inspeccionar el cubo desde distintos ángulos sin modificar la orientación real del cubo, ya que solo cambia la posición de la cámara.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|c|l|}
+\hline
+\textbf{Control} & \textbf{Acción} \\ \hline
+\texttt{W} & Orbitar hacia arriba \\ \hline
+\texttt{S} & Orbitar hacia abajo \\ \hline
+\texttt{A} & Orbitar hacia la izquierda \\ \hline
+\texttt{D} & Orbitar hacia la derecha \\ \hline
+Click derecho + mouse & Orbitar usando el mouse \\ \hline
+\end{tabular}
+\caption{Controles de órbita de la cámara.}
+\end{table}
+
+% ---------------------------------------------------------
+\subsection{Selección y rotación de camadas por vista}
+% ---------------------------------------------------------
+
+Para rotar una camada según la vista actual, primero se debe seleccionar una vista con las teclas \texttt{F}, \texttt{B}, \texttt{L}, \texttt{R}, \texttt{U} o \texttt{Q}. 
+Luego, se selecciona una camada visible usando las teclas del \texttt{1} al \texttt{6}.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|c|l|}
+\hline
+\textbf{Tecla} & \textbf{Camada seleccionada} \\ \hline
+\texttt{1} & Columna izquierda \\ \hline
+\texttt{2} & Columna central \\ \hline
+\texttt{3} & Columna derecha \\ \hline
+\texttt{4} & Fila superior \\ \hline
+\texttt{5} & Fila central \\ \hline
+\texttt{6} & Fila inferior \\ \hline
+\end{tabular}
+\caption{Selección de camadas visibles.}
+\end{table}
+
+Después de seleccionar una camada, se utilizan las flechas para realizar la rotación correspondiente.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|c|c|l|}
+\hline
+\textbf{Camada} & \textbf{Flechas} & \textbf{Acción} \\ \hline
+\texttt{1}, \texttt{2}, \texttt{3} & $\uparrow$ / $\downarrow$ & Giran columnas \\ \hline
+\texttt{4}, \texttt{5}, \texttt{6} & $\rightarrow$ / $\leftarrow$ & Giran filas \\ \hline
+\end{tabular}
+\caption{Rotación de camadas en modo por vista.}
+\end{table}
+
+% ---------------------------------------------------------
+\subsection{Modo global de nueve camadas}
+% ---------------------------------------------------------
+
+El programa también incluye un modo global, activado con la tecla \texttt{P}. 
+En este modo, las teclas numéricas seleccionan directamente las camadas reales del cubo, sin depender de la vista actual de la cámara.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|c|l|}
+\hline
+\textbf{Tecla} & \textbf{Camada global} \\ \hline
+\texttt{1} & Camada izquierda \\ \hline
+\texttt{2} & Camada central en eje X \\ \hline
+\texttt{3} & Camada derecha \\ \hline
+\texttt{4} & Camada superior \\ \hline
+\texttt{5} & Camada central en eje Y \\ \hline
+\texttt{6} & Camada inferior \\ \hline
+\texttt{7} & Camada frontal \\ \hline
+\texttt{8} & Camada central en eje Z \\ \hline
+\texttt{9} & Camada trasera \\ \hline
+\end{tabular}
+\caption{Selección de camadas en modo global.}
+\end{table}
+
+En este modo, las flechas indican el sentido de giro de la camada seleccionada.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|c|l|}
+\hline
+\textbf{Flecha} & \textbf{Acción} \\ \hline
+$\rightarrow$ & Giro positivo \\ \hline
+$\uparrow$ & Giro positivo \\ \hline
+$\leftarrow$ & Giro negativo \\ \hline
+$\downarrow$ & Giro negativo \\ \hline
+\end{tabular}
+\caption{Rotación de camadas en modo global.}
+\end{table}
+
+
+% ---------------------------------------------------------
+\subsection{Funcionamiento de las rotaciones}
+% ---------------------------------------------------------
+
+El funcionamiento de las rotaciones se divide en dos niveles: la rotación visual que se muestra durante la animación y la rotación lógica que modifica el estado real del cubo. Esta separación es una de las partes más importantes de la implementación, porque permite que el movimiento se vea fluido sin perder precisión en la posición final de las piezas.
+
+Cuando el usuario inicia un giro de camada, \texttt{main.cpp} asigna la camada seleccionada a \texttt{camadaActual}, guarda el sentido en \texttt{dirCamada} y activa \texttt{animRotateCamada}. La especificación de esta animación está configurada con una duración de $0.35$ segundos y una amplitud de $\pi/2$ radianes, es decir, noventa grados. La animación no es infinita y no tiene rebote, por lo que produce una interpolación lineal desde $0$ hasta $\pi/2$.
+
+En cada iteración del ciclo principal se consulta el valor actual de la animación mediante \texttt{scalar(now)}. Ese valor se multiplica por \texttt{dirCamada}, de modo que el mismo mecanismo puede representar tanto el giro normal como el giro inverso. Mientras la animación está activa, se llama a:
+
+\begin{center}
+\texttt{rubickCube.moverCamada(camadaActual, sRotateCamada * dirCamada);}
+\end{center}
+
+Esta llamada solo afecta la representación temporal. Internamente, la versión con parámetros de \texttt{aplicarTransformaciones} primero coloca todos los cubitos en su matriz base y luego aplica una rotación adicional a los cubitos que pertenecen a la camada activa. Por eso, durante la animación, solo se observa girar la camada seleccionada.
+
+Al finalizar la animación, el programa detecta la transición entre ``estaba reproduciéndose'' y ``ya no se está reproduciendo''. En ese instante llama a:
+
+\begin{center}
+\texttt{rubickCube.confirmarGiro(camadaActual, dirCamada);}
+\end{center}
+
+Esta función realiza el cambio permanente. Primero calcula una matriz de rotación exacta de $\pm \pi/2$ radianes. Luego recorre los nueve cubitos de la camada y ejecuta dos actualizaciones: cambia sus coordenadas lógicas con \texttt{rotarCoordenadas} y acumula la orientación visual con \texttt{cubito->orientacion = rot * cubito->orientacion}. Después se reconstruyen las camadas con \texttt{actualizarCamadas} y se reaplican las transformaciones base.
+
+La actualización de coordenadas se realiza con valores enteros, no con posiciones flotantes. Por ejemplo, para un giro alrededor del eje $X$, el código transforma las coordenadas $y$ y $z$; para un giro alrededor de $Y$, transforma $x$ y $z$; y para un giro alrededor de $Z$, transforma $x$ y $y$. De esta manera, los cubitos siempre terminan exactamente en alguna posición válida del conjunto $\{-1,0,1\}$, sin desviaciones numéricas.
+
+El programa también permite rotar el cubo completo con las flechas y con las teclas \texttt{K} y \texttt{L}. Estas rotaciones globales se aplican sobre \texttt{grupoGeneral}; por lo tanto, solo cambian la vista u orientación general del objeto renderizado. No modifican las coordenadas internas de los cubitos ni el estado que se usa para resolver el Rubik.
+
+Gracias a esta arquitectura, una rotación de camada tiene una apariencia continua en pantalla, pero termina en un estado discreto y exacto. Esto es fundamental para que el historial de movimientos, la mezcla aleatoria, la resolución automática y la función \texttt{getEstado} trabajen sobre una representación coherente del cubo.
+
+
+\end{document}
