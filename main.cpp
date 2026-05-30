@@ -12,14 +12,57 @@
 #include <GLFW/glfw3.h>
 
 #include <iostream>
+#include <queue>
+#include <sstream>
+#include <thread>
+#include <atomic>
+#include <cstdlib>
+#include <ctime>
+#include <min2phase/min2phase.h>
 
 using namespace std;
 
 static void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 
+// Deteccion de flanco (una sola pulsacion por tecla)
+static bool keyPressed(GLFWwindow* window, int key) {
+    static bool prev[GLFW_KEY_LAST + 1] = {};
+    const bool down    = glfwGetKey(window, key) == GLFW_PRESS;
+    const bool pressed = down && !prev[key];
+    prev[key] = down;
+    return pressed;
+}
+
+// Convierte el string de solucion Kociemba a movimientos del cubo
+static void parsearSolucion(const string& solucion, queue<pair<Camada,int>>& out) {
+    while (!out.empty()) out.pop();
+    stringstream ss(solucion);
+    string mov;
+    while (ss >> mov) {
+        Camada cam;
+        int baseDir;
+        switch (mov[0]) {
+            case 'U': cam = Up;    baseDir = -1; break;
+            case 'R': cam = Right; baseDir = -1; break;
+            case 'F': cam = Front; baseDir = -1; break;
+            case 'D': cam = Down;  baseDir =  1; break;
+            case 'L': cam = Left;  baseDir =  1; break;
+            case 'B': cam = Back;  baseDir =  1; break;
+            default: continue;
+        }
+        int dir  = baseDir;
+        int reps = 1;
+        if (mov.size() > 1) {
+            if      (mov[1] == '\'') dir  = -baseDir;
+            else if (mov[1] == '2')  reps = 2;
+        }
+        for (int i = 0; i < reps; ++i)
+            out.push({cam, dir});
+    }
+}
+
 int main() {
     glfwInit();
-
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -33,7 +76,6 @@ int main() {
     const unsigned int SCR_H = 900;
 
     GLFWwindow* window = glfwCreateWindow(SCR_W, SCR_H, "Project_11", nullptr, nullptr);
-
     if (!window) {
         cerr << "Failed to create GLFW window\n";
         glfwTerminate();
@@ -52,35 +94,68 @@ int main() {
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
 
-	RubickCube rubickCube(0.55f, 0.53f, 0.45f);
+    RubickCube rubickCube(0.55f, 0.53f, 0.45f);
 
-	Camera camera({0.0f, 0.0f, 4.0f});
-	camera.moveSpeed = 0.6f;
-	camera.setDirectView(
-		{0.0f, 0.0f, 4.0f},
-		{0.0f, 0.0f, 0.0f},
-		{0.0f, 1.0f, 0.0f}
-	);
+    // Solver Kociemba: se inicializa en segundo plano
+    std::atomic<bool> solverListo(false);
+    std::thread([&solverListo]() {
+        min2phase::init();
+        solverListo = true;
+    }).detach();
+    const double solverStartTime = glfwGetTime();
 
-	RubikControls controls;
+    srand(static_cast<unsigned>(time(nullptr)));
+
+    // Camara orbital + controles de capas (rubikControls lo maneja todo)
+    Camera camera({0.0f, 0.0f, 4.0f});
+    camera.moveSpeed = 0.6f;
+    camera.setDirectView(
+        {0.0f, 0.0f, 4.0f},
+        {0.0f, 0.0f, 0.0f},
+        {0.0f, 1.0f, 0.0f}
+    );
+
+    RubikControls controls;
 
     double prevNow = glfwGetTime();
 
     while (!glfwWindowShouldClose(window)) {
         const double now = glfwGetTime();
-
         float dt = static_cast<float>(now - prevNow);
-
-        if (dt > 0.1f) {
-            dt = 0.1f;
-        }
-
+        if (dt > 0.1f) dt = 0.1f;
         prevNow = now;
 
+        // Camara + rotacion de capas (1-9 + flechas) + vistas (F/B/L/R/U/T/O)
         controls.update(window, camera, rubickCube, dt, now);
 
-        const Mat4 view = camera.viewMatrix();
+        // Enter: resolver con Kociemba (solo si el solver carg贸 y el cubo no est谩 girando)
+        if (keyPressed(window, GLFW_KEY_ENTER) && solverListo && !controls.isRotating()) {
+            string estado = rubickCube.getEstado();
+            bool valido = (estado.size() == 54);
+            for (char c : estado)
+                if (c!='U'&&c!='R'&&c!='F'&&c!='D'&&c!='L'&&c!='B') { valido = false; break; }
+            if (valido) {
+                string sol = min2phase::solve(estado, 20, 1000000, 0, 0);
+                queue<pair<Camada,int>> movs;
+                parsearSolucion(sol, movs);
+                if (!movs.empty())
+                    controls.iniciarMovimientos(std::move(movs), now);
+            }
+        }
 
+        // Space: mezclar aleatoriamente con 20 movimientos
+        if (keyPressed(window, GLFW_KEY_SPACE) && !controls.isRotating()) {
+            static const Camada allCams[] = {Front, Back, Up, Down, Right, Left};
+            queue<pair<Camada,int>> movs;
+            for (int i = 0; i < 20; ++i) {
+                Camada c = allCams[rand() % 6];
+                int    d = (rand() % 2) * 2 - 1;
+                movs.push({c, d});
+            }
+            controls.iniciarMovimientos(std::move(movs), now);
+        }
+
+        const Mat4 view = camera.viewMatrix();
         const Mat4 projection = perspective(
             camera.zoomFovDeg,
             static_cast<float>(SCR_W) / static_cast<float>(SCR_H),
@@ -96,12 +171,28 @@ int main() {
 
         rubickCube.draw();
 
+        // Titulo: progreso del solver o instrucciones
+        {
+            static bool tituloFinalPuesto = false;
+            static int  ultimoSegMostrado = -1;
+            if (!solverListo) {
+                int seg = (int)(glfwGetTime() - solverStartTime);
+                if (seg != ultimoSegMostrado) {
+                    ultimoSegMostrado = seg;
+                    std::string t = "Cargando solver... " + std::to_string(seg) + "s";
+                    glfwSetWindowTitle(window, t.c_str());
+                }
+            } else if (!tituloFinalPuesto) {
+                tituloFinalPuesto = true;
+                glfwSetWindowTitle(window, "Cubo Rubik  |  Enter=Resolver  |  Space=Mezclar  |  1-9+Flechas=Capas  |  F/B/L/R/U/T=Vista");
+            }
+        }
+
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
     glfwTerminate();
-
     return 0;
 }
 

@@ -7,6 +7,8 @@
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
+#include <queue>
+#include <utility>
 
 enum class ViewMode {
     Front,
@@ -28,6 +30,20 @@ public:
     RubikControls()
         : layerRotationAnim(createLayerRotationAnim())
     {}
+
+    bool isRotating() const { return rotatingLayer; }
+
+    // Alimenta una secuencia de movimientos (solver o scramble) al sistema de animacion.
+    void iniciarMovimientos(std::queue<std::pair<Camada,int>> moves, double now) {
+        pendingMoves = std::move(moves);
+        if (!rotatingLayer && !pendingMoves.empty()) {
+            auto [cam, dir] = pendingMoves.front(); pendingMoves.pop();
+            currentLayer    = cam;
+            layerDirection  = dir;
+            rotatingLayer   = true;
+            layerRotationAnim.ignite(now);
+        }
+    }
 
     void update(GLFWwindow* window, Camera& camera, RubickCube& cube, float dt, double now) {
         handleExit(window);
@@ -56,6 +72,8 @@ private:
     bool mouseInitialized = false;
     double lastMouseX = 0.0;
     double lastMouseY = 0.0;
+
+    std::queue<std::pair<Camada,int>> pendingMoves;
 
 private:
     static AnimSpec createLayerRotationAnim() {
@@ -368,6 +386,14 @@ private:
             cube.confirmarGiro(currentLayer, layerDirection);
             rotatingLayer = false;
             angle = 0.0f;
+            // Continuar con el siguiente movimiento de la cola (solver / scramble)
+            if (!pendingMoves.empty()) {
+                auto [cam, dir] = pendingMoves.front(); pendingMoves.pop();
+                currentLayer   = cam;
+                layerDirection = dir;
+                rotatingLayer  = true;
+                layerRotationAnim.ignite(now);
+            }
         }
         else {
             cube.moverCamada(
