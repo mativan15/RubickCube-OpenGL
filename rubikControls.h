@@ -27,8 +27,7 @@ enum class LayerMode {
 
 class RubikControls {
 public:
-    RubikControls()
-        : layerRotationAnim(createLayerRotationAnim())
+    RubikControls(): layerRotationAnim(createLayerRotationAnim())
     {}
 
     bool isRotating() const { return rotatingLayer; }

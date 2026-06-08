@@ -98,18 +98,18 @@ int main() {
     RubickCube rubickCube(0.55f, 0.53f, 0.45f);
 
     // Solver Kociemba: init en segundo plano
-    std::atomic<bool> solverListo(false);
-    std::thread([&solverListo]() {
+    atomic<bool> solverListo(false);
+    thread([&solverListo]() {
         min2phase::init();
         solverListo = true;
     }).detach();
     const double solverStartTime = glfwGetTime();
 
     // Estado del solve async: solve() tambien corre en thread para no bloquear el render
-    std::atomic<bool> resolviendoEnCurso(false);
-    std::atomic<bool> solucionLista(false);
-    std::string       solucionBuffer;
-    std::mutex        solucionMutex;
+    atomic<bool> resolviendoEnCurso(false);
+    atomic<bool> solucionLista(false);
+    string       solucionBuffer;
+    mutex        solucionMutex;
 
     srand(static_cast<unsigned>(time(nullptr)));
 
@@ -137,12 +137,12 @@ int main() {
 
         // Recoger solucion cuando el thread la termina
         if (solucionLista.exchange(false)) {
-            std::string sol;
-            { std::lock_guard<std::mutex> lk(solucionMutex); sol = solucionBuffer; }
+            string sol;
+            { lock_guard<mutex> lk(solucionMutex); sol = solucionBuffer; }
             queue<pair<Camada,int>> movs;
             parsearSolucion(sol, movs);
             if (!movs.empty())
-                controls.iniciarMovimientos(std::move(movs), now);
+                controls.iniciarMovimientos(move(movs), now);
         }
 
         // Enter: lanza el solve en un thread (no bloquea el render)
@@ -155,10 +155,10 @@ int main() {
             if (valido) {
                 resolviendoEnCurso = true;
                 solucionLista     = false;
-                std::thread([estado, &solucionBuffer, &solucionMutex,
+                thread([estado, &solucionBuffer, &solucionMutex,
                              &solucionLista, &resolviendoEnCurso]() {
-                    std::string sol = min2phase::solve(estado, 20, 1000000, 0, 0);
-                    { std::lock_guard<std::mutex> lk(solucionMutex); solucionBuffer = sol; }
+                    string sol = min2phase::solve(estado, 20, 1000000, 0, 0);
+                    { lock_guard<mutex> lk(solucionMutex); solucionBuffer = sol; }
                     solucionLista     = true;
                     resolviendoEnCurso = false;
                 }).detach();
@@ -174,7 +174,7 @@ int main() {
                 int    d = (rand() % 2) * 2 - 1;
                 movs.push({c, d});
             }
-            controls.iniciarMovimientos(std::move(movs), now);
+            controls.iniciarMovimientos(move(movs), now);
         }
 
         const Mat4 view = camera.viewMatrix();
@@ -201,7 +201,7 @@ int main() {
                 int seg = (int)(glfwGetTime() - solverStartTime);
                 if (seg != ultimoSegMostrado) {
                     ultimoSegMostrado = seg;
-                    std::string t = "Cargando solver... " + std::to_string(seg) + "s";
+                    string t = "Cargando solver... " + to_string(seg) + "s";
                     glfwSetWindowTitle(window, t.c_str());
                 }
             } else if (!tituloFinalPuesto) {
